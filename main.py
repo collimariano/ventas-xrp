@@ -8,16 +8,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-import subprocess
-import os
-
-# DEBUG: forzar ejecución del .sh desde el script (sin sudo ni apt-get dentro del .py)
-if os.path.exists("./install-chrome.sh"):
-    print("🧪 Ejecutando install-chrome.sh desde main.py...")
-    subprocess.run(["chmod", "+x", "./install-chrome.sh"], check=True)
-    subprocess.run(["./install-chrome.sh"], check=True)
-else:
-    print("⚠️ No se encontró install-chrome.sh")
 
 
 # Variables de entorno
