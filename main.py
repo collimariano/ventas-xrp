@@ -7,6 +7,12 @@ from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import requests
 import re
+import os
+
+usuario = os.environ["XRP_USUARIO"]
+clave = os.environ["XRP_CLAVE"]
+telefono = os.environ["CALLMEBOT_PHONE"]
+apikey = os.environ["CALLMEBOT_APIKEY"]
 
 options = Options()
 options.add_argument('--headless')
@@ -18,8 +24,8 @@ print("Iniciando sesión con Selenium...")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 driver.get("https://account.xrp.net/")
 
-driver.find_element(By.NAME, "txtUsuario").send_keys("mariano.colli@hotmail.com")
-driver.find_element(By.NAME, "txtClave").send_keys("Magaco285", Keys.RETURN)
+driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
+driver.find_element(By.NAME, "txtClave").send_keys(clave, Keys.RETURN)
 
 driver.implicitly_wait(10)
 cookies = driver.get_cookies()
@@ -56,9 +62,9 @@ mensaje = f"Fecha: {fecha_hoy}\nVentas: ${total_formatted}"
 print("Enviando mensaje vía CallMeBot...")
 
 params = {
-    'phone': '+5493513039544',
+    'phone': telefono,
     'text': mensaje,
-    'apikey': '1558088'
+    'apikey': apikey
 }
 
 res = requests.get("https://api.callmebot.com/whatsapp.php", params=params)
