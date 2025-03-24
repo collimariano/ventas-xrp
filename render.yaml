@@ -3,5 +3,8 @@ services:
     name: ventas-xrp
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      chmod +x install-chrome.sh
+      ./install-chrome.sh
+      pip install -r requirements.txt
     startCommand: python main.py
