@@ -1,5 +1,0 @@
-services:
-  - type: worker
-    name: ventas-xrp
-    plan: free
-    env: docker
