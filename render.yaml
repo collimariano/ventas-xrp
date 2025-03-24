@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: ventas-xrp
+    env: python
+    plan: free
+    runtime: python
+    buildCommand: pip install -r requirements.txt && ./install-chrome.sh
+    startCommand: python main.py
+    autoDeploy: true
