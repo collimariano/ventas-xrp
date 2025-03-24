@@ -25,7 +25,8 @@ options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 
 print("Iniciando sesión con Selenium...")
-driver = webdriver.Chrome(executable_path=driver_path, options=options)
+service = Service(driver_path)
+driver = webdriver.Chrome(service=service, options=options)
 driver.get("https://account.xrp.net/")
 
 driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
