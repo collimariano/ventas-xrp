@@ -3,25 +3,29 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import requests
 import re
 import os
+import shutil
 
 usuario = os.environ["XRP_USUARIO"]
 clave = os.environ["XRP_CLAVE"]
 telefono = os.environ["CALLMEBOT_PHONE"]
 apikey = os.environ["CALLMEBOT_APIKEY"]
 
+chrome_path = shutil.which("google-chrome") or shutil.which("chrome") or "/usr/bin/google-chrome"
+driver_path = shutil.which("chromedriver") or "/usr/local/bin/chromedriver"
+
 options = Options()
+options.binary_location = chrome_path
 options.add_argument('--headless')
 options.add_argument('--disable-gpu')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 
 print("Iniciando sesión con Selenium...")
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver = webdriver.Chrome(executable_path=driver_path, options=options)
 driver.get("https://account.xrp.net/")
 
 driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
