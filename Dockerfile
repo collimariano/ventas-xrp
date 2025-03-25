@@ -13,8 +13,8 @@ RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.d
 
 # Instalar ChromeDriver compatible
 # Obtener versión de Chrome instalada
-RUN CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+') && \
-    echo "🔍 Versión de Chrome: $CHROME_VERSION" && \
+RUN CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+') && \
+    echo "🔍 Versión completa de Chrome: $CHROME_VERSION" && \
     echo "$CHROME_VERSION" > /tmp/chrome_version.txt
 
 # Descargar JSON de versiones de ChromeDriver y extraer URL
