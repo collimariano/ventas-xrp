@@ -4,6 +4,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 import requests
 import re
@@ -32,9 +34,16 @@ def run_script():
     driver = webdriver.Chrome(service=service, options=options)
 
     driver.get("https://account.xrp.net/")
-    driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
-    driver.find_element(By.NAME, "txtClave").send_keys(clave, Keys.RETURN)
-    driver.implicitly_wait(10)
+    wait = WebDriverWait(driver, 20)
+
+    usuario_input = wait.until(EC.presence_of_element_located((By.NAME, "txtUsuario")))
+    usuario_input.send_keys(usuario)
+
+    clave_input = wait.until(EC.presence_of_element_located((By.NAME, "txtClave")))
+    clave_input.send_keys(clave, Keys.RETURN)
+
+    wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "body")))  # espera a que cargue algo
+
     cookies = driver.get_cookies()
     driver.quit()
 
