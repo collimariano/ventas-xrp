@@ -8,11 +8,12 @@ RUN apt-get update && apt-get install -y \
     libasound2 libatk-bridge2.0-0 libatk1.0-0 libgtk-3-0 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Variables de entorno para Chromium + Selenium
 ENV CHROME_BIN=/usr/bin/chromium
 ENV PATH="${PATH}:/usr/lib/chromium/"
 
-# Crear carpeta de trabajo
+# Exponer el puerto para Flask (Render necesita saberlo)
+EXPOSE 10000
+
 WORKDIR /app
 COPY . /app
 

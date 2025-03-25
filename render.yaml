@@ -1,5 +1,6 @@
-cronJobs:
-  - name: ventas-xrp
-    schedule: "30 22 * * *"  # 19:00 Argentina
-    dockerCommand: "python main.py"
+services:
+  - type: web
+    name: ventas-xrp
+    env: docker
     plan: free
+    autoDeploy: true
