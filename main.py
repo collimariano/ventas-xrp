@@ -3,19 +3,13 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 from datetime import datetime
 import requests
 import re
 import os
 
 app = Flask(__name__)
-
-@app.route("/health")
-def health():
-    return "✅ Online"
 
 @app.route("/")
 def run_script():
@@ -25,33 +19,26 @@ def run_script():
     apikey = os.environ["CALLMEBOT_APIKEY"]
 
     options = Options()
-    options.add_argument('--headless=new')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-software-rasterizer')
-    options.add_argument('--disable-setuid-sandbox')
-    options.add_argument('--remote-debugging-port=9222')
     options.binary_location = "/usr/bin/chromium"
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--remote-debugging-port=9222")
 
-    service = ChromeService(executable_path="/usr/bin/chromedriver")
+    service = Service(executable_path="/usr/lib/chromium/chromedriver")
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
         driver.get("https://account.xrp.net/")
-        wait = WebDriverWait(driver, 20)
-
-        usuario_input = wait.until(EC.presence_of_element_located((By.NAME, "txtUsuario")))
-        usuario_input.send_keys(usuario)
-
-        clave_input = wait.until(EC.presence_of_element_located((By.NAME, "txtClave")))
-        clave_input.send_keys(clave, Keys.RETURN)
-
-        wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "body")))
-
+        driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
+        driver.find_element(By.NAME, "txtClave").send_keys(clave, Keys.RETURN)
+        driver.implicitly_wait(10)
         cookies = driver.get_cookies()
-    finally:
         driver.quit()
+    except Exception as e:
+        driver.quit()
+        return f"❌ Error en Selenium: {str(e)}"
 
     session = requests.Session()
     for cookie in cookies:
@@ -82,8 +69,7 @@ def run_script():
 
     res = requests.get("https://api.callmebot.com/whatsapp.php", params=params)
 
-    return f"✅ Mensaje enviado: ${total_formatted}" if res.status_code == 200 else f"❌ Error: {res.text}"
-
+    return "✅ Mensaje enviado" if res.status_code == 200 else f"❌ Error al enviar mensaje: {res.text}"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
