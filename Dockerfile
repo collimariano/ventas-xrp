@@ -18,12 +18,12 @@ RUN CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+') &&
     echo "$CHROME_VERSION" > /tmp/chrome_version.txt
 
 # Descargar JSON de versiones de ChromeDriver y extraer URL
+# Descargar JSON de versiones y extraer URL del ChromeDriver correspondiente
 RUN CHROME_VERSION=$(cat /tmp/chrome_version.txt) && \
-    curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json \
-    -o versions.json && \
+    curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json -o versions.json && \
     grep -A 10 "\"version\": \"$CHROME_VERSION\"" versions.json > chunk.json && \
-    grep "url" chunk.json | grep "linux64" | grep "chromedriver-linux64" \
-    | grep -o 'https://[^"]*' > /tmp/driver_url.txt
+    grep "url" chunk.json | grep "linux64" | grep "chromedriver-linux64" | grep -o 'https://[^"]*' > /tmp/driver_url.txt
+
 
 # Descargar y configurar ChromeDriver
 RUN DRIVER_URL=$(cat /tmp/driver_url.txt) && \
