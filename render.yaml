@@ -3,3 +3,5 @@ services:
     name: ventas-xrp
     env: docker
     plan: free
+    autoDeploy: true
+    schedule: "0 22 * * *"  # 19:00 Argentina
