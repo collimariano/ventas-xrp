@@ -13,6 +13,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route("/health")
+def health():
+    return "✅ Online"
+
 @app.route("/")
 def run_script():
     usuario = os.environ["XRP_USUARIO"]
@@ -21,31 +25,33 @@ def run_script():
     apikey = os.environ["CALLMEBOT_APIKEY"]
 
     options = Options()
-    options.add_argument('--headless')
+    options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
     options.add_argument('--disable-software-rasterizer')
-    options.add_argument('--single-process')
+    options.add_argument('--disable-setuid-sandbox')
     options.add_argument('--remote-debugging-port=9222')
     options.binary_location = "/usr/bin/chromium"
 
     service = ChromeService(executable_path="/usr/bin/chromedriver")
     driver = webdriver.Chrome(service=service, options=options)
 
-    driver.get("https://account.xrp.net/")
-    wait = WebDriverWait(driver, 20)
+    try:
+        driver.get("https://account.xrp.net/")
+        wait = WebDriverWait(driver, 20)
 
-    usuario_input = wait.until(EC.presence_of_element_located((By.NAME, "txtUsuario")))
-    usuario_input.send_keys(usuario)
+        usuario_input = wait.until(EC.presence_of_element_located((By.NAME, "txtUsuario")))
+        usuario_input.send_keys(usuario)
 
-    clave_input = wait.until(EC.presence_of_element_located((By.NAME, "txtClave")))
-    clave_input.send_keys(clave, Keys.RETURN)
+        clave_input = wait.until(EC.presence_of_element_located((By.NAME, "txtClave")))
+        clave_input.send_keys(clave, Keys.RETURN)
 
-    wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "body")))  # espera a que cargue algo
+        wait.until(EC.presence_of_all_elements_located((By.TAG_NAME, "body")))
 
-    cookies = driver.get_cookies()
-    driver.quit()
+        cookies = driver.get_cookies()
+    finally:
+        driver.quit()
 
     session = requests.Session()
     for cookie in cookies:
@@ -76,7 +82,7 @@ def run_script():
 
     res = requests.get("https://api.callmebot.com/whatsapp.php", params=params)
 
-    return f"✅ Mensaje enviado con total: ${total_formatted}" if res.status_code == 200 else f"❌ Error: {res.text}"
+    return f"✅ Mensaje enviado: ${total_formatted}" if res.status_code == 200 else f"❌ Error: {res.text}"
 
 
 if __name__ == "__main__":
