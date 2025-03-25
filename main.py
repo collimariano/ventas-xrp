@@ -18,15 +18,14 @@ def run_script():
     telefono = os.environ["CALLMEBOT_PHONE"]
     apikey = os.environ["CALLMEBOT_APIKEY"]
 
-
-
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
+    options.add_argument('--disable-software-rasterizer')
+    options.add_argument('--single-process')
     options.add_argument('--remote-debugging-port=9222')
-
     options.binary_location = "/usr/bin/chromium"
 
     service = ChromeService(executable_path="/usr/bin/chromedriver")
@@ -68,7 +67,7 @@ def run_script():
 
     res = requests.get("https://api.callmebot.com/whatsapp.php", params=params)
 
-    return "✅ Mensaje enviado" if res.status_code == 200 else f"❌ Error: {res.text}"
+    return f"✅ Mensaje enviado con total: ${total_formatted}" if res.status_code == 200 else f"❌ Error: {res.text}"
 
 
 if __name__ == "__main__":
