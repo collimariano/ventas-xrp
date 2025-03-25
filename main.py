@@ -11,6 +11,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route("/ping")
+def ping():
+    return "pong"
+
 @app.route("/")
 def run_script():
     usuario = os.environ["XRP_USUARIO"]
@@ -24,11 +28,14 @@ def run_script():
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument("--remote-debugging-port=9222")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-extensions")
 
     service = Service("/usr/bin/chromedriver")
-    driver = webdriver.Chrome(service=service, options=options)
 
     try:
+        driver = webdriver.Chrome(service=service, options=options)
         driver.get("https://account.xrp.net/")
         driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
         driver.find_element(By.NAME, "txtClave").send_keys(clave, Keys.RETURN)
@@ -36,7 +43,6 @@ def run_script():
         cookies = driver.get_cookies()
         driver.quit()
     except Exception as e:
-        driver.quit()
         return f"❌ Error en Selenium: {str(e)}"
 
     session = requests.Session()
@@ -67,8 +73,9 @@ def run_script():
     }
 
     res = requests.get("https://api.callmebot.com/whatsapp.php", params=params)
-
     return "✅ Mensaje enviado" if res.status_code == 200 else f"❌ Error al enviar mensaje: {res.text}"
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
