@@ -12,12 +12,26 @@ RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.d
     apt install -y ./google-chrome-stable_current_amd64.deb || apt --fix-broken install -y
 
 # Instalar ChromeDriver compatible
+# Obtener versión de Chrome instalada
 RUN CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+') && \
-    DRIVER_URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json | grep -A 10 "$CHROME_VERSION" | grep "linux64" | grep "chromedriver-linux64" | grep -o 'https://[^"]*') && \
-    wget -q "$DRIVER_URL" -O chromedriver.zip && \
+    echo "🔍 Versión de Chrome: $CHROME_VERSION" && \
+    echo "$CHROME_VERSION" > /tmp/chrome_version.txt
+
+# Descargar JSON de versiones de ChromeDriver y extraer URL
+RUN CHROME_VERSION=$(cat /tmp/chrome_version.txt) && \
+    curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json \
+    -o versions.json && \
+    grep -A 10 "\"version\": \"$CHROME_VERSION\"" versions.json > chunk.json && \
+    grep "url" chunk.json | grep "linux64" | grep "chromedriver-linux64" \
+    | grep -o 'https://[^"]*' > /tmp/driver_url.txt
+
+# Descargar y configurar ChromeDriver
+RUN DRIVER_URL=$(cat /tmp/driver_url.txt) && \
+    wget "$DRIVER_URL" -O chromedriver.zip && \
     unzip chromedriver.zip && \
     mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver && \
     chmod +x /usr/local/bin/chromedriver
+
 
 # Crear carpeta de trabajo y copiar archivos
 WORKDIR /app
