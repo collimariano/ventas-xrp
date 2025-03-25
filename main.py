@@ -26,8 +26,7 @@ def run_script():
     options.add_argument("--disable-gpu")
     options.add_argument("--remote-debugging-port=9222")
 
-    service = Service(executable_path="/usr/lib/chromium/chromedriver")
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(options=options)
 
     try:
         driver.get("https://account.xrp.net/")
