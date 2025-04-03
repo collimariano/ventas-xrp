@@ -1,62 +1,46 @@
-from flask import Flask
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from datetime import datetime
 import requests
+from urllib.parse import urlparse, parse_qs
+from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from dotenv import load_dotenv
 import re
 import os
-import time
 
-app = Flask(__name__)
+load_dotenv()
 
-@app.route("/ping")
-def ping():
-    return "✅ App despierta"
-
-@app.route("/")
-def run_script():
-    usuario = os.environ["XRP_USUARIO"]
-    clave = os.environ["XRP_CLAVE"]
-    telefono = os.environ["CALLMEBOT_PHONE"]
-    apikey = os.environ["CALLMEBOT_APIKEY"]
-
-    options = Options()
-    options.binary_location = "/usr/bin/chromium"
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--remote-debugging-port=9222")
-
-    # Intentar iniciar Selenium con reintentos
-    MAX_RETRIES = 3
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            driver = webdriver.Chrome(options=options)
-            break
-        except Exception as e:
-            if attempt == MAX_RETRIES:
-                return f"❌ Error al iniciar Chrome: {str(e)}"
-            time.sleep(5)
-
-    try:
-        driver.get("https://account.xrp.net/")
-        driver.find_element(By.NAME, "txtUsuario").send_keys(usuario)
-        driver.find_element(By.NAME, "txtClave").send_keys(clave, Keys.RETURN)
-        driver.implicitly_wait(10)
-        cookies = driver.get_cookies()
-        driver.quit()
-    except Exception as e:
-        driver.quit()
-        return f"❌ Error en Selenium: {str(e)}"
-
+def login_xrp(user, password) -> None:
     session = requests.Session()
-    for cookie in cookies:
-        session.cookies.set(cookie['name'], cookie['value'])
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Origin": "https://account.xrp.com.ar",
+        "Referer": "https://account.xrp.com.ar/",
+        "User-Agent": "Mozilla/5.0",
+        "X-Requested-With": "XMLHttpRequest",
+        "xrp-application-id": "6463ce5794dbd60533c2bf36c057f38c5db15858a8371b8327abcaf6efc7b04bdea2c78c9388f1ad7b7761f8f3853c5a5fdfa42c3ebf1faf269c518b440b17ce"
+    }
+    payload = {
+        "req": [user, password],
+        "remember": 0
+    }
+    response = session.post("https://account.xrp.com.ar/login/", headers=headers, json=payload)
+    data = response.json()["data"]
+    
+    login_url = data["url"]
+    parsed = urlparse(login_url)
+    qs = parse_qs(parsed.query)
+    sid = qs.get("sid", [""])[0]
+    psid = qs.get("psid", [""])[0]
 
-    fecha_hoy = datetime.now().strftime('%d/%m/%Y')
+    session.cookies.set("ssid_xrp", session.cookies.get("ssid_xrp"), domain="svr1.xrp.com.ar", path="/")
+    session.cookies.set("_sid", sid, domain="svr1.xrp.com.ar", path="/")
+    session.cookies.set("_psid", psid, domain="svr1.xrp.com.ar", path="/")
+    
+    return session, sid, psid
+
+def get_total(session):
+    fecha = datetime.now().strftime('%d/%m/%Y')
     url = "https://svr1.xrp.com.ar/hmarket6/reportes/rendicion_ventas_cobros_server.asp"
     headers = {
         'User-Agent': 'Mozilla/5.0',
@@ -64,28 +48,65 @@ def run_script():
         'Origin': 'https://svr1.xrp.com.ar',
         'Referer': 'https://svr1.xrp.com.ar/hmarket6/reportes/rendicion_ventas_cobros.asp',
     }
-    payload = f'__idmatrix=xrp_mtxDatos_1&__bufferpage=500&modulo=5&accion=filter&fecha={fecha_hoy}&idunineg=1'
+    payload = f'__idmatrix=xrp_mtxDatos_1&__bufferpage=500&modulo=5&accion=filter&fecha={fecha}&idunineg=1'
 
-    try:
-        response = session.post(url, headers=headers, data=payload)
-        matches = re.findall(r'<record[^>]+tipo="Venta"[^>]+denom="(Contado|No Definida)"[^>]+importe="([\d.]+)"', response.text)
-        total = sum(float(importe) for _, importe in matches)
-        total_formatted = f"{total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except Exception as e:
-        return f"❌ Error al obtener datos: {str(e)}"
+    response = session.post(url, headers=headers, data=payload)
+    matches = re.findall(r'<record[^>]+tipo="Venta"[^>]+denom="(Contado|No Definida)"[^>]+importe="([\d.]+)"', response.text)
+    total = sum(float(importe) for _, importe in matches)
+    return total
 
-    mensaje = f"Fecha: {fecha_hoy}\nVentas: ${total_formatted}"
-    params = {
-        'phone': telefono,
-        'text': mensaje,
-        'apikey': apikey
-    }
+def format_total(monto):
+    return f"{monto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    try:
-        res = requests.get("https://api.callmebot.com/whatsapp.php", params=params)
-        return "✅ Mensaje enviado" if res.status_code == 200 else f"❌ Error al enviar mensaje: {res.text}"
-    except Exception as e:
-        return f"❌ Error al contactar CallMeBot: {str(e)}"
+def enviar_email(asunto, cuerpo_html):
+    remitente = os.environ["EMAIL_USER"]
+    contraseña = os.environ["EMAIL_PASSWORD"]
+    
+    # Lista de destinatarios separados por coma en .env
+    destinatarios = os.environ["EMAIL_DESTINATARIOS"].split(",")  # Ej: "correo1@gmail.com,correo2@gmail.com"
+    
+    msg = MIMEText(cuerpo_html, "html")
+    msg["Subject"] = asunto
+    msg["From"] = remitente
+    msg["To"] = ", ".join(destinatarios)
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(remitente, contraseña)
+        server.send_message(msg)
+
+def generar_html(total_formateado):
+    fecha = datetime.now().strftime('%d/%m/%Y')
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: auto; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 30px;">
+            <h2 style="color: #4CAF50;">📈 Reporte de Ventas - {fecha}</h2>
+            <p style="font-size: 18px;">Hola! 👋</p>
+            <p>El total de ventas del día es:</p>
+            <h1 style="font-size: 32px; color: #2196F3;">💵 ${total_formateado}</h1>
+            <hr style="margin: 20px 0;">
+        </div>
+    </body>
+    </html>
+    """
+
+def main():
+    usuario = os.environ["XRP_USUARIO"]
+    clave = os.environ["XRP_CLAVE"]
+
+    print("🔐 Logging in...")
+    session, sid, psid = login_xrp(usuario, clave)
+    
+    print("📊 Loading total...")
+    total = get_total(session)
+    total_formateado = format_total(total)
+
+    print(f"✅ Total: ${total_formateado}")
+
+    cuerpo_html = generar_html(total_formateado)
+    enviar_email("📬 Reporte de Ventas Diario - XRP", cuerpo_html)
+    print("📬 Email enviado a todos los destinatarios.")
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    main()
